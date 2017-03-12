@@ -17,6 +17,11 @@
 // 2 ^ difficulty rounds of SHA-256 will be computed.
 var difficulty = 16;
 
+var encode_method = {
+    'password_choice_base64': extras.api.base64,
+    'password_choice_basic': extras.api.basic,
+}
+
 $(function() {
   // Get the current tab.
   chrome.tabs.query({
@@ -74,14 +79,13 @@ $(function() {
               // Compute the first 16 base64 characters of iterated-SHA-256(domain + '/' + key, 2 ^ difficulty).
               var key = $('#key').val();
               domain = $('#domain').val().replace(/^\s+|\s+$/g, '').toLowerCase();
-
+              var choice = $('input[type=radio]:checked').attr('id');
               var rounds = Math.pow(2, difficulty);
               var bits = domain + '/' + key;
               for (var i = 0; i < rounds; i += 1) {
                 bits = sjcl.hash.sha256.hash(bits);
               }
-
-              var hash = sjcl.codec.base64.fromBits(bits).slice(0, 16);
+              var hash = encode_method[choice](bits, 16);
               if (!passwordMode) {
                 $('#hash').val(hash);
               }
@@ -118,11 +122,10 @@ $(function() {
                 }
               });
             }
-
             if (!passwordMode) {
               // Register the update handler.
-              $('#domain, #key').bind('propertychange change keyup input paste', debouncedUpdate);
-
+              $('#domain, #key').bind('propertychange change click keyup input paste', debouncedUpdate);
+              $("input[type='radio']").change(debouncedUpdate);
               // Update the hash right away.
               debouncedUpdate();
             }
